@@ -54,20 +54,40 @@ with st.sidebar:
     min_rating = st.slider("⭐ 最低評分要求", 1.0, 5.0, 3.5, 0.1)
     
     st.divider()
-    if st.button("📩 取得驗證碼"):
+    st.subheader("🔐 管理員控制台")
+    
+    # 按鈕：發送驗證碼
+    if st.button("📩 取得電子郵件驗證碼"):
         st.session_state.current_otp = str(secrets.randbelow(900000) + 100000)
         if send_otp_email(st.session_state.current_otp):
-            st.success("已發送！")
+            st.success("驗證碼已發送！")
     
-    entered_otp = st.text_input("輸入驗證碼", type="password")
+    # 輸入框：驗證碼
+    entered_otp = st.text_input("請輸入 6 位數驗證碼", type="password")
+    
+    # 權限檢查邏輯
     if 'current_otp' in st.session_state and entered_otp == st.session_state.current_otp:
-        st.warning("🔓 管理員模式")
-        names = [res['name'] for res in st.session_state.restaurant_db]
-        target = st.selectbox("刪除餐廳", names)
-        if st.button("❌ 確定刪除"):
-            st.session_state.restaurant_db = [r for r in st.session_state.restaurant_db if r['name'] != target]
-            pd.DataFrame(st.session_state.restaurant_db).to_csv(DATA_FILE, index=False)
-            st.rerun()
+        st.warning("🔓 管理員模式已開啟")
+        
+        # --- 新增：退出按鈕 ---
+        if st.button("🚪 退出管理模式", use_container_width=True):
+            if 'current_otp' in st.session_state:
+                del st.session_state.current_otp # 刪除密碼紀錄
+            st.rerun() # 立即重整頁面
+        
+        st.divider()
+        
+        # 刪除功能
+        if st.session_state.restaurant_db:
+            names = [res['name'] for res in st.session_state.restaurant_db]
+            target = st.selectbox("選擇要刪除的餐廳", names)
+            if st.button("❌ 確定刪除這家餐廳"):
+                st.session_state.restaurant_db = [r for r in st.session_state.restaurant_db if r['name'] != target]
+                pd.DataFrame(st.session_state.restaurant_db).to_csv(DATA_FILE, index=False)
+                st.success(f"已成功刪除 {target}")
+                st.rerun()
+    elif entered_otp:
+        st.error("驗證碼不正確")
 
 # --- 4. 主頁面：抽選功能 ---
 st.title("🍴 成大生今天吃什麼？")
